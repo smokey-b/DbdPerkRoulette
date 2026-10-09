@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DBD Random Perk Picker</title>
+<style>
+:root{color-scheme:dark;--bg:#111217;--panel:#1b1d25;--line:#343744;--red:#d33b42;--muted:#a8abba}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#29202a 0,#111217 55%);color:#f5f5f7;font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:900px;margin:auto;padding:22px 15px 50px}.brand{letter-spacing:.18em;color:#ff777b;font-weight:900;font-size:.78rem}h1{margin:5px 0 4px;font-size:clamp(1.8rem,5vw,3rem)}.sub{color:var(--muted);margin-top:0}.panel{background:rgba(27,29,37,.96);border:1px solid var(--line);border-radius:16px;padding:18px;margin:16px 0;box-shadow:0 10px 35px #0003}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1;min-width:180px}label.field{display:block;color:var(--muted);font-size:.9rem}select,input[type=search]{display:block;width:100%;margin-top:5px;background:#101116;color:#fff;border:1px solid #454856;border-radius:9px;padding:11px;font:inherit}.btn{border:0;border-radius:10px;padding:13px 16px;background:var(--red);color:white;font-weight:800;font-size:1rem;cursor:pointer}.btn.secondary{background:#353845}.result{min-height:145px;display:grid;align-content:center;text-align:center;padding:15px 0}.result small{color:#ff8588;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.result h2{font-size:clamp(1.7rem,5vw,2.7rem);margin:10px 0}.result p{color:var(--muted);margin:0}.stats{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.9rem}.stats b{color:white}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.checkline{display:flex;align-items:center;gap:9px;background:#13151b;padding:10px;border-radius:9px}.checkline input,.perk input{accent-color:var(--red);width:18px;height:18px;flex-shrink:0}.perklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:13px}.perk{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;border:1px solid #30333d;border-radius:9px;background:#14161c;min-width:0}.perk input{margin-top:4px}.perk span{overflow-wrap:anywhere}.perk small{display:block;color:var(--muted);font-size:.75rem}.sectiontitle{margin-bottom:5px}.hint{font-size:.85rem;color:var(--muted)}.pill{display:inline-block;background:#34313b;color:#ffc4c5;border-radius:20px;padding:3px 9px;font-size:.78rem;margin:3px}.picked{font-size:1.25rem;font-weight:800;margin:6px}.foot{color:var(--muted);font-size:.82rem}@media(max-width:520px){main{padding:17px 11px 35px}.panel{padding:14px}.controls{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="brand">THE FOG • LOADOUT CHALLENGE</div><h1>Random Perk Picker</h1><p class="sub">Roll a perk you own. Your checkboxes and settings save automatically on this device.</p>
+<section class="panel"><div class="row"><label class="field">Perk pool<select id="pool"><option value="both">Survivor + Killer</option><option value="Survivor">Survivor perks only</option><option value="Killer">Killer perks only</option></select></label><label class="field">Pick mode<select id="mode"><option value="one">One random perk</option><option value="four">Random build (up to 4 perks)</option></select></label></div>
+<div class="result" aria-live="polite"><small id="resultlabel">YOUR NEXT CHALLENGE</small><div id="result"><h2>Ready when you are…</h2><p>Only perks checked as owned can be rolled.</p></div></div><button class="btn" id="roll" style="width:100%">🎲 Roll random perk</button><div class="stats" style="margin-top:14px"><span>Owned: <b id="ownedcount">0</b></span><span>In current pool: <b id="poolcount">0</b></span><span>Saved locally ✓</span></div></section>
+<section class="panel"><h2 class="sectiontitle">Your perks</h2><p class="hint">Tick a perk when you own/unlocked it. Search to find perks quickly. Changes save as you go.</p><input type="search" id="search" placeholder="Search perks…" autocomplete="off"><div class="controls"><label class="checkline"><input type="checkbox" id="selectall"><span>Mark all visible as owned</span></label><label class="checkline"><input type="checkbox" id="hideowned"><span>Hide owned perks</span></label></div><div class="stats"><span id="showncount"></span><span class="pill">Survivor / Killer labels included</span></div><div id="perks" class="perklist"></div></section>
+<p class="foot">Progress is stored in this browser using localStorage. It remains after closing and reopening this page in the same browser, but does not sync between devices. Dead by Daylight adds and changes perks over time, so check the list against the current in-game roster.</p></main>
+<script>
+const raw = `
+Survivor|Ace in the Hole
+Survivor|Adrenaline
+Survivor|Aftercare
+Survivor|Alert
+Survivor|Any Means Necessary
+Survivor|Appraisal
+Survivor|Autodidact
+Survivor|Babysitter
+Survivor|Background Player
+Survivor|Balanced Landing
+Survivor|Bardic Inspiration
+Survivor|Better Together
+Survivor|Bite the Bullet
+Survivor|Blast Mine
+Survivor|Blood Pact
+Survivor|Blood Rush
+Survivor|Boil Over
+Survivor|Bond
+Survivor|Boon: Circle of Healing
+Survivor|Boon: Dark Theory
+Survivor|Boon: Exponential
+Survivor|Boon: Illumination
+Survivor|Boon: Shadow Step
+Survivor|Borrowed Time
+Survivor|Botany Knowledge
+Survivor|Breakdown
+Survivor|Breakout
+Survivor|Buckle Up
+Survivor|Built to Last
+Survivor|Calm Spirit
+Survivor|Camaraderie
+Survivor|Champion of Light
+Survivor|Chemical Trap
+Survivor|Clairvoyance
+Survivor|Clean Break
+Survivor|Come and Get Me!
+Survivor|Corrective Action
+Survivor|Counterforce
+Survivor|Cut Loose
+Survivor|Dance With Me
+Survivor|Dead Hard
+Survivor|Deadline
+Survivor|Deception
+Survivor|Déjà Vu
+Survivor|Deliverance
+Survivor|Desperate Measures
+Survivor|Detective's Hunch
+Survivor|Distortion
+Survivor|Diversion
+Survivor|Do No Harm
+Survivor|Dramaturgy
+Survivor|Empathic Connection
+Survivor|Empathy
+Survivor|Exultation
+Survivor|Eyes of Belmont
+Survivor|Fast Track
+Survivor|Finesse
+Survivor|Fixated
+Survivor|Flashbang
+Survivor|Flip-Flop
+Survivor|Fogwise
+Survivor|For the People
+Survivor|Friendly Competition
+Survivor|Head On
+Survivor|Hope
+Survivor|Hyperfocus
+Survivor|Inner Focus
+Survivor|Inner Strength
+Survivor|Invocation: Treacherous Crows
+Survivor|Invocation: Weaving Spiders
+Survivor|Iron Will
+Survivor|Kindred
+Survivor|Leader
+Survivor|Left Behind
+Survivor|Light-Footed
+Survivor|Lightweight
+Survivor|Lithe
+Survivor|Lucky Break
+Survivor|Lucky Star
+Survivor|Made for This
+Survivor|Mettle of Man
+Survivor|Mirrored Illusion
+Survivor|No Mither
+Survivor|No One Left Behind
+Survivor|Off the Record
+Survivor|Open-Handed
+Survivor|Overcome
+Survivor|Overzealous
+Survivor|Parental Guidance
+Survivor|Pharmacy
+Survivor|Plunderer's Instinct
+Survivor|Plot Twist
+Survivor|Poised
+Survivor|Potential Energy
+Survivor|Power Struggle
+Survivor|Premonition
+Survivor|Prove Thyself
+Survivor|Quick & Quiet
+Survivor|Quick Gambit
+Survivor|Resilience
+Survivor|Resurgence
+Survivor|Rookie Spirit
+Survivor|Saboteur
+Survivor|Scavenger
+Survivor|Scene Partner
+Survivor|Second Wind
+Survivor|Self-Care
+Survivor|Self-Preservation
+Survivor|Smash Hit
+Survivor|Small Game
+Survivor|Slippery Meat
+Survivor|Solidarity
+Survivor|Soul Guard
+Survivor|Sprint Burst
+Survivor|Stake Out
+Survivor|Streetwise
+Survivor|Strength in Shadows
+Survivor|Teamwork: Collective Stealth
+Survivor|Teamwork: Power of Two
+Survivor|Technician
+Survivor|Tenacity
+Survivor|This Is Not Happening
+Survivor|Troubleshooter
+Survivor|Unbreakable
+Survivor|Up the Ante
+Survivor|Urban Evasion
+Survivor|Vigil
+Survivor|Visionary
+Survivor|Wake Up!
+Survivor|We'll Make It
+Survivor|We're Gonna Live Forever
+Survivor|Windows of Opportunity
+Survivor|Wiretap
+Survivor|Wicked
+Killer|A Nurse's Calling
+Killer|Agitation
+Killer|Alien Instinct
+Killer|Bamboozle
+Killer|Barbecue & Chilli
+Killer|Batteries Included
+Killer|Beast of Prey
+Killer|Bitter Murmur
+Killer|Blood Echo
+Killer|Blood Warden
+Killer|Bloodhound
+Killer|Brutal Strength
+Killer|Call of Brine
+Killer|Corrupt Intervention
+Killer|Coulrophobia
+Killer|Coup de Grâce
+Killer|Cruel Limits
+Killer|Dark Arrogance
+Killer|Dark Devotion
+Killer|Darkness Revealed
+Killer|Dead Man's Switch
+Killer|Deathbound
+Killer|Discordance
+Killer|Dissolution
+Killer|Dominance
+Killer|Dragon's Grip
+Killer|Dying Light
+Killer|Enduring
+Killer|Eruption
+Killer|Fire Up
+Killer|Forced Hesitation
+Killer|Forced Penance
+Killer|Franklin's Demise
+Killer|Friends 'til the End
+Killer|Furtive Chase
+Killer|Game Afoot
+Killer|Gearhead
+Killer|Genetic Limits
+Killer|Grim Embrace
+Killer|Hex: Blood Favour
+Killer|Hex: Crowd Control
+Killer|Hex: Devour Hope
+Killer|Hex: Face the Darkness
+Killer|Hex: Haunted Ground
+Killer|Hex: Huntress Lullaby
+Killer|Hex: Pentimento
+Killer|Hex: Retribution
+Killer|Hex: Ruin
+Killer|Hex: The Third Seal
+Killer|Hex: Two Can Play
+Killer|Hex: Undying
+Killer|Hoarder
+Killer|Hubris
+Killer|Human Greed
+Killer|Hysteria
+Killer|I'm All Ears
+Killer|Infectious Fright
+Killer|Insidious
+Killer|Iron Grasp
+Killer|Iron Maiden
+Killer|Knock Out
+Killer|Languid Touch
+Killer|Lethal Pursuer
+Killer|Leverage
+Killer|Lightborn
+Killer|Machine Learning
+Killer|Mad Grit
+Killer|Make Your Choice
+Killer|Merciless Storm
+Killer|Mindbreaker
+Killer|Monitor & Abuse
+Killer|Nemesis
+Killer|No Quarter
+Killer|No Way Out
+Killer|Nowhere to Hide
+Killer|Oppression
+Killer|Overcharge
+Killer|Overwhelming Presence
+Killer|Pain Resonance
+Killer|Pop Goes the Weasel
+Killer|Predator
+Killer|Rancor
+Killer|Rapid Brutality
+Killer|Remember Me
+Killer|Scourge Hook: Floods of Rage
+Killer|Scourge Hook: Hangman's Trick
+Killer|Scourge Hook: Jagged Compass
+Killer|Shadowborn
+Killer|Sloppy Butcher
+Killer|Spies from the Shadows
+Killer|Spirit Fury
+Killer|Starstruck
+Killer|Stridor
+Killer|Superior Anatomy
+Killer|Surge
+Killer|Surveillance
+Killer|Terminus
+Killer|Thanatophobia
+Killer|Thrilling Tremors
+Killer|THWACK!
+Killer|Tinkerer
+Killer|Trail of Torment
+Killer|Unbound
+Killer|Undone
+Killer|Unforeseen
+Killer|Unnerving Presence
+Killer|Whispers
+Killer|Zanshin Tactics
+`;
+const perks=[...new Map(raw.trim().split('\n').map(line=>{const [role,name]=line.split('|');return [role+'|'+name,{role,name}]})).values()].sort((a,b)=>a.name.localeCompare(b.name));
+const KEY='dbdRandomPerkPicker_v1';let saved={owned:{},pool:'both',mode:'one',hideowned:false};try{saved={...saved,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){}const owned=saved.owned||{};const $=id=>document.getElementById(id);$('pool').value=saved.pool||'both';$('mode').value=saved.mode||'one';$('hideowned').checked=!!saved.hideowned;
+function save(){saved={owned,pool:$('pool').value,mode:$('mode').value,hideowned:$('hideowned').checked};try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}}
+function eligible(){return perks.filter(p=>($('pool').value==='both'||p.role===$('pool').value)&&owned[p.role+'|'+p.name])}
+function render(){const q=$('search').value.trim().toLocaleLowerCase();const visible=perks.filter(p=>p.name.toLocaleLowerCase().includes(q)&&(!$('hideowned').checked||!owned[p.role+'|'+p.name]));$('perks').innerHTML='';visible.forEach(p=>{const key=p.role+'|'+p.name,label=document.createElement('label');label.className='perk';const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!owned[key];cb.addEventListener('change',()=>{owned[key]=cb.checked;save();render()});const txt=document.createElement('span');txt.textContent=p.name;const small=document.createElement('small');small.textContent=p.role;txt.appendChild(small);label.append(cb,txt);$('perks').appendChild(label)});$('ownedcount').textContent=perks.filter(p=>owned[p.role+'|'+p.name]).length;$('poolcount').textContent=eligible().length;$('showncount').textContent=`Showing ${visible.length} of ${perks.length} listed perks`;$('selectall').checked=visible.length>0&&visible.every(p=>owned[p.role+'|'+p.name])}
+$('selectall').addEventListener('change',()=>{const q=$('search').value.trim().toLocaleLowerCase();perks.filter(p=>p.name.toLocaleLowerCase().includes(q)&&(!$('hideowned').checked||!owned[p.role+'|'+p.name])).forEach(p=>owned[p.role+'|'+p.name]=$('selectall').checked);save();render()});$('search').addEventListener('input',render);$('hideowned').addEventListener('change',()=>{save();render()});$('pool').addEventListener('change',()=>{save();render()});$('mode').addEventListener('change',save);
+$('roll').addEventListener('click',()=>{const list=eligible();if(!list.length){$('resultlabel').textContent='NO PERKS AVAILABLE';$('result').innerHTML='<h2>Tick some owned perks</h2><p>Your current pool has no checked perks.</p>';return}const count=$('mode').value==='four'?Math.min(4,list.length):1;for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[list[i],list[j]]=[list[j],list[i]]}const picks=list.slice(0,count);$('resultlabel').textContent=count===1?'YOUR RANDOM PERK':'YOUR RANDOM BUILD';$('result').innerHTML='';picks.forEach(p=>{const item=document.createElement('div');item.className='picked';item.textContent=p.name;const tag=document.createElement('span');tag.className='pill';tag.textContent=p.role;item.appendChild(tag);$('result').appendChild(item)});if(count===1){const desc=document.createElement('p');desc.textContent='Go make it work in the Fog.';$('result').appendChild(desc)}});render();
+</script></body></html>
